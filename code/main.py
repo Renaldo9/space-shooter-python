@@ -1,9 +1,9 @@
-# TIME IN VIDEO: 2:03:53
+# TIME IN VIDEO: 2:36:29
 
 from os import kill
 import pygame
 from os.path import join
-from random import randint
+from random import randint, uniform
 
 
 class Player(pygame.sprite.Sprite):
@@ -62,6 +62,15 @@ class Meteor(pygame.sprite.Sprite):
         super().__init__(groups)
         self.image = surf
         self.rect = self.image.get_frect(center = pos)
+        self.start_time = pygame.time.get_ticks()
+        self.life_time = 3000
+        self.direction = pygame.Vector2(uniform(-0.5, 0.5), 1)
+        self.speed = 400
+        
+    def update(self, dt):
+        self.rect.center += self.direction * self.speed * dt 
+        if pygame.time.get_ticks() - self.start_time >= self.life_time:
+            self.kill()
         
 
     
@@ -78,7 +87,6 @@ meteor_surf = pygame.image.load(join('images','meteor.png')).convert_alpha()
 laser_surf = pygame.image.load(join('images','laser.png')).convert_alpha()
 star_surface = pygame.image.load(join('images', 'star.png')).convert_alpha()
 
-
 # load sprites
 all_sprites = pygame.sprite.Group()
 for i in range(20):
@@ -86,13 +94,9 @@ for i in range(20):
 player = Player(all_sprites)
     
 
-
-
 # custom events -> meteor event
 meteor_event = pygame.event.custom_type()
 pygame.time.set_timer(meteor_event, 500)
-
-
 
 
 while running:
@@ -102,7 +106,9 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        # if event.type == meteor_event:
+        if event.type == meteor_event:
+            x,y = randint(0, WINDOW_WIDTH), randint(-200, -100)
+            Meteor (meteor_surf, (x, y), all_sprites)
             
     # update
     all_sprites.update(dt)
