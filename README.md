@@ -1,1 +1,2 @@
-Space Shooter game made in python with pygame-ce
+# Space Shooter game made in python with pygame-ce
+## Gameplay:
