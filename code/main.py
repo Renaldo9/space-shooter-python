@@ -1,4 +1,3 @@
-
 from os import kill
 import pygame
 from os.path import join
@@ -100,11 +99,30 @@ class AnimatedExplosion(pygame.sprite.Sprite):
         else:
             self.kill()
 
+def reset_game():
+    # Clear all sprites
+    all_sprites.empty()
+    meteor_sprites.empty()
+    laser_sprites.empty()
+
+    # Recreate stars and player
+    for i in range(20):
+        Star(all_sprites, star_surface)
+    global player
+    player = Player(all_sprites)
+
+    # Reset game variables (e.g., score)
+    global start_time
+    start_time = pygame.time.get_ticks()
         
 def collisions():
+    global game_paused
+    
     collision_sprites = pygame.sprite.spritecollide(player, meteor_sprites, True, pygame.sprite.collide_mask)
     if collision_sprites:
         explosion_sound.play()
+        AnimatedExplosion(explosion_frames, player.rect.center, all_sprites)
+        game_paused = True
         
     for laser in laser_sprites:
         collided_sprites = pygame.sprite.spritecollide(laser, meteor_sprites, True)
@@ -114,11 +132,50 @@ def collisions():
             
 
 def display_score():
-    current_time = pygame.time.get_ticks() // 1000
+    current_time = (pygame.time.get_ticks() - start_time) // 1000
     text_surf = font.render(str(current_time), True, (240,240,240))
-    text_rect = text_surf.get_frect(midbottom = (WINDOW_WIDTH/ 2, WINDOW_HEIGHT - 50))
-    display_surface.blit(text_surf,text_rect)
-    pygame.draw.rect(display_surface, (240,240,240), text_rect.inflate(20,12).move(0,-8), 5, 10)
+    text_rect = text_surf.get_frect(midbottom=(WINDOW_WIDTH / 2, WINDOW_HEIGHT - 50))
+    display_surface.blit(text_surf, text_rect)
+    pygame.draw.rect(display_surface, (240,240,240), text_rect.inflate(20, 12).move(0, -8), 5, 10)
+
+def show_menu():
+    global menu_displayed
+    if not menu_displayed:
+        # Render menu background
+        menu_surf = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT))
+        menu_surf.set_alpha(200)
+        menu_surf.fill((0, 0, 0))
+        display_surface.blit(menu_surf, (0, 0))
+
+        # Render options
+        font_size = 50
+        menu_font = pygame.font.Font(join('images', 'Oxanium-Bold.ttf'), font_size)
+        reset_text = menu_font.render("Press R to Reset", True, (255, 255, 255))
+        quit_text = menu_font.render("Press Q to Quit", True, (255, 255, 255))
+
+        reset_rect = reset_text.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 - font_size))
+        quit_rect = quit_text.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + font_size))
+
+        display_surface.blit(reset_text, reset_rect)
+        display_surface.blit(quit_text, quit_rect)
+        pygame.display.update()
+
+        menu_displayed = True  # Mark menu as displayed
+
+def handle_menu_input():
+    global running, game_paused, menu_displayed
+
+    # Handle events to reset or quit
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_r:  # Reset the game
+                reset_game()
+                game_paused = False
+                menu_displayed = False  # Reset menu display flag
+            elif event.key == pygame.K_q:  # Quit the game
+                running = False
     
 #General Setup
 pygame.init()
@@ -127,6 +184,9 @@ display_surface = pygame.display.set_mode((WINDOW_WIDTH,WINDOW_HEIGHT))
 pygame.display.set_caption("Space Shooter")
 running = True
 clock = pygame.time.Clock()
+start_time = pygame.time.get_ticks()
+game_paused = False
+menu_displayed = False
 
 # import
 meteor_surf = pygame.image.load(join('images','meteor.png')).convert_alpha()
@@ -162,18 +222,26 @@ pygame.time.set_timer(meteor_event, 500)
 
 while running:
     dt = clock.tick() / 1000
-
+    
+    if game_paused:
+        show_menu()
+        handle_menu_input()
+        continue
+    
     #event loop
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        if event.type == meteor_event:
+        if event.type == meteor_event and not game_paused:
             x,y = randint(0, WINDOW_WIDTH), randint(-200, -100)
             Meteor (meteor_surf, (x, y), (all_sprites, meteor_sprites))
             
     # update
     all_sprites.update(dt)
     collisions()
+    
+    
+    
     
     
     #draw game
